@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zahni Mahir: Complete 13 Modules</title>
+    <style>
+        :root { --primary: #27ae60; --accent: #f1c40f; --danger: #e74c3c; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f0f0; margin: 0; display: flex; justify-content: center; }
+        #app { width: 100%; max-width: 500px; background: white; min-height: 100vh; border: 4px solid var(--primary); display: flex; flex-direction: column; }
+        .header-bar { background: var(--primary); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 10; }
+        .reset-link { background: var(--danger); color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 0.7rem; }
+        .menu-screen { padding: 20px; overflow-y: auto; flex-grow: 1; }
+        .category-card { background: #fff; border: 3px solid var(--primary); border-radius: 15px; padding: 15px; margin-bottom: 12px; cursor: pointer; display: flex; align-items: center; gap: 15px; }
+        .cat-icon { font-size: 40px; }
+        .level-screen { padding: 20px; text-align: center; }
+        .level-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 20px; }
+        .level-dot { aspect-ratio: 1/1; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; }
+        .level-dot.completed { background: var(--accent); color: #2c3e50; }
+        .q-box { padding: 25px; text-align: center; }
+        .visual { font-size: 80px; margin-bottom: 15px; }
+        .urdu { font-size: 1.5rem; direction: rtl; margin-bottom: 10px; color: #2c3e50; font-weight: bold; line-height: 1.4; }
+        .english { font-size: 1rem; color: #7f8c8d; margin-bottom: 25px; }
+        .choice-btn { width: 100%; padding: 18px; margin-bottom: 12px; border-radius: 15px; border: 2px solid #ddd; background: white; font-size: 1.3rem; cursor: pointer; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+<div id="app">
+    <div class="header-bar"><span>🌟 Zahni Mahir</span><button class="reset-link" onclick="resetAll()">Reset Game</button></div>
+    <div id="category-screen" class="menu-screen"><h2 class="urdu" style="text-align:center">اپنا سبق منتخب کریں</h2><div id="category-list"></div></div>
+    <div id="level-screen" class="level-screen hidden"><button onclick="showScreen('category-screen')" style="float:left; cursor:pointer; background:none; border:none; font-size:1.2rem;">⬅️ Back</button><h2 class="urdu" id="cat-title-display">لیول منتخب کریں</h2><div class="level-grid" id="level-dots-container"></div></div>
+    <div id="game-screen" class="q-box hidden"><div class="visual" id="q-icon">❓</div><div class="urdu" id="q-ur">سوال</div><div class="english" id="q-en">Question</div><div id="choices-box"></div></div>
+</div>
+
+<script>
+    let userProgress = JSON.parse(localStorage.getItem('zahniProgress')) || {};
+    const categories = [
+        { id: 'logic', name: 'منطق (Logic)', icon: '🧠' },
+        { id: 'patterns', name: 'ترتیب (Patterns)', icon: '🧩' },
+        { id: 'clean', name: 'صفائی (Clean)', icon: '🧼' },
+        { id: 'animals', name: 'جانور (Animals)', icon: '🦁' },
+        { id: 'trees', name: 'درخت (Trees)', icon: '🌳' },
+        { id: 'flowers', name: 'پھول (Flowers)', icon: '🌸' },
+        { id: 'veg', name: 'سبزیاں (Veg)', icon: '🥦' },
+        { id: 'tech', name: 'ٹیکنالوجی (Tech)', icon: '📱' },
+        { id: 'science', name: 'سائنس (Science)', icon: '🔬' },
+        { id: 'math', name: 'ریاضی (Math)', icon: '🔢' },
+        { id: 'islamic', name: 'اسلامیات (Islamic)', icon: '🕌' },
+        { id: 'colors', name: 'رنگ (Colors)', icon: '🎨' },
+        { id: 'social', name: 'رشتے (Social)', icon: '👨‍👩‍👧‍👦' }
+    ];
+
+    const database = {
+        clean: [
+            { id: 1, icon: '🧼', ur: 'ہاتھ کس سے دھونے چاہئیں؟', en: 'Wash hands with?', choices: [{t:'Soap (صابن) 🧼', c:true}, {t:'Juice (جوس)', c:false}] },
+            { id: 2, icon: '🦷', ur: 'دانت کب صاف کرنے چاہئیں؟', en: 'When to brush teeth?', choices: [{t:'Morning/Night (صبح/رات)', c:true}, {t:'Never', c:false}] },
+            { id: 3, icon: '🗑️', ur: 'کچرا کہاں پھینکنا ہے؟', en: 'Where to throw trash?', choices: [{t:'Dustbin (کچرا دان)', c:true}, {t:'Floor', c:false}] },
+            { id: 4, icon: '✂️', ur: 'ناخن کس سے کاٹتے ہیں؟', en: 'What cuts nails?', choices: [{t:'Cutter (کٹّر)', c:true}, {t:'Spoon', c:false}] },
+            { id: 5, icon: '🚿', ur: 'صاف رہنے کے لیے کیا ضروری ہے؟', en: 'To stay clean, we need?', choices: [{t:'Bath (نہانا)', c:true}, {t:'Dirt', c:false}] },
+            { id: 6, icon: '🪥', ur: 'برش پر کیا لگاتے ہیں؟', en: 'What goes on a toothbrush?', choices: [{t:'Paste (پیسٹ)', c:true}, {t:'Jam', c:false}] },
+            { id: 7, icon: '🧺', ur: 'گندے کپڑے کہاں رکھتے ہیں؟', en: 'Where to put dirty clothes?', choices: [{t:'Basket (ٹوکری)', c:true}, {t:'Bed', c:false}] },
+            { id: 8, icon: '🤧', ur: 'چھینک آئے تو کیا استعمال کریں؟', en: 'Use what when sneezing?', choices: [{t:'Tissue (ٹشو)', c:true}, {t:'Hand', c:false}] },
+            { id: 9, icon: '🧹', ur: 'کمرہ صاف کرنے کے لیے کیا چاہیے؟', en: 'What cleans a room?', choices: [{t:'Broom (جھاڑو)', c:true}, {t:'Toy', c:false}] },
+            { id: 10, icon: '👞', ur: 'جوتے چمکانے کے لیے کیا چاہیے؟', en: 'What polishes shoes?', choices: [{t:'Polish (پالش)', c:true}, {t:'Water', c:false}] },
+            { id: 11, icon: '🧼', ur: 'نہاتے وقت کیا استعمال ہوتا ہے؟', en: 'Used while bathing?', choices: [{t:'Soap (صابن)', c:true}, {t:'Paper', c:false}] },
+            { id: 12, icon: '🧴', ur: 'بالوں میں کیا لگانا چاہیے؟', en: 'What to put in hair?', choices: [{t:'Oil (تیل)', c:true}, {t:'Milk', c:false}] },
+            { id: 13, icon: '🥣', ur: 'کھانے سے پہلے کیا کرنا چاہیے؟', en: 'Before eating, we must?', choices: [{t:'Wash Hands (ہاتھ دھونا)', c:true}, {t:'Sleep', c:false}] },
+            { id: 14, icon: '🏠', ur: 'گھر کو کیسے رکھنا چاہیے؟', en: 'How to keep home?', choices: [{t:'Clean (صاف)', c:true}, {t:'Messy', c:false}] },
+            { id: 15, icon: '🚰', ur: 'پانی پینے کے بعد نل کا کیا کریں؟', en: 'After water, turn off tap?', choices: [{t:'Yes (جی ہاں)', c:true}, {t:'No', c:false}] },
+            { id: 16, icon: '🛌', ur: 'اٹھنے کے بعد بستر کا کیا کریں؟', en: 'After waking, fix bed?', choices: [{t:'Fold (تہہ کریں)', c:true}, {t:'Leave it', c:false}] },
+            { id: 17, icon: '👔', ur: 'سکول کیسے جانا چاہیے؟', en: 'How to go to school?', choices: [{t:'Uniform (یونیفارم)', c:true}, {t:'Pajamas', c:false}] },
+            { id: 18, icon: '🍎', ur: 'پھل کھانے سے پہلے کیا کریں؟', en: 'Before eating fruit?', choices: [{t:'Wash (دھوئیں)', c:true}, {t:'Peel only', c:false}] },
+            { id: 19, icon: '💇', ur: 'بالوں کو کیسے رکھنا چاہیے؟', en: 'How to keep hair?', choices: [{t:'Combed (کنگھی)', c:true}, {t:'Wild', c:false}] },
+            { id: 20, icon: '🦠', ur: 'جراثیم سے کیسے بچیں؟', en: 'How to avoid germs?', choices: [{t:'Cleanliness (صفائی)', c:true}, {t:'Eating dirt', c:false}] },
+            { id: 21, icon: '🚮', ur: 'گلی میں کچرا دیکھ کر کیا کریں؟', en: 'See trash on street?', choices: [{t:'Pick up (اٹھا لیں)', c:true}, {t:'Ignore', c:false}] },
+            { id: 22, icon: '👕', ur: 'پسینے والے کپڑوں کا کیا کریں؟', en: 'What to do with sweaty clothes?', choices: [{t:'Wash (دھوئیں)', c:true}, {t:'Wear again', c:false}] },
+            { id: 23, icon: '👂', ur: 'کان کیسے صاف کرنے چاہئیں؟', en: 'How to clean ears?', choices: [{t:'Soft cloth (نرم کپڑا)', c:true}, {t:'Stick', c:false}] },
+            { id: 24, icon: '👣', ur: 'گھر میں داخل ہوتے وقت؟', en: 'When entering home?', choices: [{t:'Remove shoes (جوتے اتاریں)', c:true}, {t:'Run inside', c:false}] },
+            { id: 25, icon: '🥗', ur: 'صحت مند رہنے کے لیے؟', en: 'To stay healthy?', choices: [{t:'Fresh Food (تازہ کھانا)', c:true}, {t:'Junk Food', c:false}] },
+            { id: 26, icon: '🌞', ur: 'صبح سویرے کیا کرنا چاہیے؟', en: 'Early morning activity?', choices: [{t:'Exercise (ورزش)', c:true}, {t:'TV', c:false}] },
+            { id: 27, icon: '🌙', ur: 'رات کو جلدی؟', en: 'At night, early?', choices: [{t:'Sleep (سونا)', c:true}, {t:'Play', c:false}] },
+            { id: 28, icon: '🧦', ur: 'موزے روزانہ کیا کرنے چاہئیں؟', en: 'Change socks daily?', choices: [{t:'Yes (جی ہاں)', c:true}, {t:'Weekly', c:false}] },
+            { id: 29, icon: '💅', ur: 'ناخنوں میں گندگی ہو تو؟', en: 'Dirt in nails?', choices: [{t:'Clean (صاف کریں)', c:true}, {t:'Leave it', c:false}] },
+            { id: 30, icon: '🏆', ur: 'صفائی نصف ایمان ہے۔', en: 'Cleanliness is half faith.', choices: [{t:'SubhanAllah', c:true}, {t:'MashAllah', c:false}] }
+        ],
+        animals: [
+            { id: 1, icon: '🦁', ur: 'جنگل کا بادشاہ کون ہے؟', en: 'King of the jungle?', choices: [{t:'Lion (شیر)', c:true}, {t:'Cat', c:false}] },
+            { id: 2, icon: '🐘', ur: 'لمبی سونڈ کس کی ہے؟', en: 'Who has a trunk?', choices: [{t:'Elephant (ہاتھی)', c:true}, {t:'Dog', c:false}] },
+            { id: 3, icon: '🦒', ur: 'لمبی گردن والا جانور؟', en: 'Long necked animal?', choices: [{t:'Giraffe (زرافہ)', c:true}, {t:'Cow', c:false}] },
+            { id: 4, icon: '🐒', ur: 'درختوں پر کون اچھلتا ہے؟', en: 'Who jumps on trees?', choices: [{t:'Monkey (بندر)', c:true}, {t:'Fish', c:false}] },
+            { id: 5, icon: '🐝', ur: 'شہد کون بناتا ہے؟', en: 'Who makes honey?', choices: [{t:'Bee (شہد کی مکھی)', c:true}, {t:'Ant', c:false}] },
+            { id: 6, icon: '🐎', ur: 'تیز کون دوڑتا ہے؟', en: 'Who runs fast?', choices: [{t:'Horse (گھوڑا)', c:true}, {t:'Turtle', c:false}] },
+            { id: 7, icon: '🐄', ur: 'ہمیں دودھ کون دیتا ہے؟', en: 'Who gives us milk?', choices: [{t:'Cow (گائے)', c:true}, {t:'Snake', c:false}] },
+            { id: 8, icon: '🐤', ur: 'انڈے سے کیا نکلتا ہے؟', en: 'What comes from an egg?', choices: [{t:'Chick (چوزہ)', c:true}, {t:'Kitten', c:false}] },
+            { id: 9, icon: '🐰', ur: 'گاجر کسے پسند ہے؟', en: 'Who likes carrots?', choices: [{t:'Rabbit (خرگوش)', c:true}, {t:'Lion', c:false}] },
+            { id: 10, icon: '🐋', ur: 'سمندر کا سب سے بڑا جانور؟', en: 'Biggest sea animal?', choices: [{t:'Whale (وہیل)', c:true}, {t:'Frog', c:false}] },
+            { id: 11, icon: '🐱', ur: 'میاؤں میاؤں کون کرتا ہے؟', en: 'Who says Meow?', choices: [{t:'Cat (بلی)', c:true}, {t:'Dog', c:false}] },
+            { id: 12, icon: '🐶', ur: 'وفادار جانور کون سا ہے؟', en: 'Which animal is loyal?', choices: [{t:'Dog (کتا)', c:true}, {t:'Lion', c:false}] },
+            { id: 13, icon: '🐫', ur: 'صحرا کا جہاز کسے کہتے ہیں؟', en: 'Ship of the desert?', choices: [{t:'Camel (اونٹ)', c:true}, {t:'Horse', c:false}] },
+            { id: 14, icon: '🦓', ur: 'کالی سفید دھاریاں کس پر ہیں؟', en: 'Who has black & white stripes?', choices: [{t:'Zebra (زیبرا)', c:true}, {t:'Tiger', c:false}] },
+            { id: 15, icon: '🦆', ur: 'پانی میں کون تیرتا ہے؟', en: 'Who swims in water?', choices: [{t:'Duck (بطخ)', c:true}, {t:'Chicken', c:false}] },
+            { id: 16, icon: '🦜', ur: 'باتیں کرنے والا پرندہ؟', en: 'Talking bird?', choices: [{t:'Parrot (طوطا)', c:true}, {t:'Crow', c:false}] },
+            { id: 17, icon: '🦉', ur: 'رات کو کون جاگتا ہے؟', en: 'Who stays awake at night?', choices: [{t:'Owl (الو)', c:true}, {t:'Pigeon', c:false}] },
+            { id: 18, icon: '🦚', ur: 'خوبصورت پروں والا پرندہ؟', en: 'Bird with beautiful feathers?', choices: [{t:'Peacock (مور)', c:true}, {t:'Hen', c:false}] },
+            { id: 19, icon: '🐸', ur: 'بارش میں کون ٹر ٹر کرتا ہے؟', en: 'Who croaks in rain?', choices: [{t:'Frog (مینڈک)', c:true}, {t:'Lizard', c:false}] },
+            { id: 20, icon: '🕷️', ur: 'جالا کون بناتا ہے؟', en: 'Who makes a web?', choices: [{t:'Spider (مکڑی)', c:true}, {t:'Ant', c:false}] },
+            { id: 21, icon: '🐊', ur: 'پانی کا خطرناک جانور؟', en: 'Dangerous water animal?', choices: [{t:'Crocodile (مگرمچھ)', c:true}, {t:'Fish', c:false}] },
+            { id: 22, icon: '🐑', ur: 'ہمیں اون (Wool) کس سے ملتی ہے؟', en: 'Where do we get wool?', choices: [{t:'Sheep (بھیڑ)', c:true}, {t:'Cat', c:false}] },
+            { id: 23, icon: '🦋', ur: 'رنگین پروں والی؟', en: 'With colorful wings?', choices: [{t:'Butterfly (تتلی)', c:true}, {t:'Fly', c:false}] },
+            { id: 24, icon: '🐢', ur: 'سب سے سست کون چلتا ہے؟', en: 'Who moves slowest?', choices: [{t:'Turtle (کچھوا)', c:true}, {t:'Rabbit', c:false}] },
+            { id: 25, icon: '🐜', ur: 'محنتی کیڑا کون سا ہے؟', en: 'Hardworking insect?', choices: [{t:'Ant (چیونٹی)', c:true}, {t:'Beetle', c:false}] },
+            { id: 26, icon: '🦘', ur: 'جیب والا جانور؟', en: 'Animal with a pouch?', choices: [{t:'Kangaroo (کنگرو)', c:true}, {t:'Bear', c:false}] },
+            { id: 27, icon: '🐼', ur: 'بانس (Bamboo) کون کھاتا ہے؟', en: 'Who eats bamboo?', choices: [{t:'Panda (پانڈا)', c:true}, {t:'Tiger', c:false}] },
+            { id: 28, icon: '🦅', ur: 'آسمان میں بہت اونچا؟', en: 'Flies very high?', choices: [{t:'Eagle (عقاب)', c:true}, {t:'Sparrow', c:false}] },
+            { id: 29, icon: '🐻', ur: 'شہد کس جانور کو پسند ہے؟', en: 'Which animal likes honey?', choices: [{t:'Bear (ریچھ)', c:true}, {t:'Wolf', c:false}] },
+            { id: 30, icon: '🐐', ur: 'قربانی کا جانور؟', en: 'Sacrifice animal?', choices: [{t:'Goat (بکری)', c:true}, {t:'Lion', c:false}] }
+        ],
+        tech: [
+            { id: 1, icon: '📱', ur: 'بات کرنے کے لیے کیا ہے؟', en: 'What is for calling?', choices: [{t:'Mobile 📱', c:true}, {t:'Spoon', c:false}] },
+            { id: 2, icon: '📺', ur: 'کارٹون کہاں دیکھتے ہیں؟', en: 'Where to watch cartoons?', choices: [{t:'TV 📺', c:true}, {t:'Fridge', c:false}] },
+            { id: 3, icon: '🎧', ur: 'آواز سننے کے لیے؟', en: 'Wear what for sound?', choices: [{t:'Headphones 🎧', c:true}, {t:'Glasses', c:false}] },
+            { id: 4, icon: '📸', ur: 'تصویر کس سے کھینچتے ہیں؟', en: 'What takes photos?', choices: [{t:'Camera 📸', c:true}, {t:'Watch', c:false}] },
+            { id: 5, icon: '💻', ur: 'کمپیوٹر چلانے کے لیے؟', en: 'For computing?', choices: [{t:'Laptop 💻', c:true}, {t:'Book', c:false}] },
+            { id: 6, icon: '⌨️', ur: 'ٹائپنگ کس سے کرتے ہیں؟', en: 'What is for typing?', choices: [{t:'Keyboard ⌨️', c:true}, {t:'Mouse', c:false}] },
+            { id: 7, icon: '🖱️', ur: 'تیر (Cursor) کس سے ہلتا ہے؟', en: 'What moves the arrow?', choices: [{t:'Mouse 🖱️', c:true}, {t:'Key', c:false}] },
+            { id: 8, icon: '🎮', ur: 'گیم کھیلنے کے لیے؟', en: 'What is for gaming?', choices: [{t:'Joystick 🎮', c:true}, {t:'Cup', c:false}] },
+            { id: 9, icon: '🖨️', ur: 'پرنٹ کون کرتا ہے؟', en: 'What prints on paper?', choices: [{t:'Printer 🖨️', c:true}, {t:'Fan', c:false}] },
+            { id: 10, icon: '🔋', ur: 'کھلونے کس سے چلتے ہیں؟', en: 'What powers toys?', choices: [{t:'Battery 🔋', c:true}, {t:'Water', c:false}] },
+            { id: 11, icon: '💡', ur: 'روشنی کس سے ہوتی ہے؟', en: 'What gives bulb light?', choices: [{t:'Electricity (بجلی)', c:true}, {t:'Juice', c:false}] },
+            { id: 12, icon: '🚁', ur: 'بغیر پائلٹ کے اڑنے والا؟', en: 'Flies without pilot?', choices: [{t:'Drone (ڈرون)', c:true}, {t:'Kite', c:false}] },
+            { id: 13, icon: '⌚', ur: 'وقت دیکھنے کے لیے؟', en: 'To see time?', choices: [{t:'Watch (گھڑی)', c:true}, {t:'Ring', c:false}] },
+            { id: 14, icon: '🤖', ur: 'انسانی کام کرنے والی مشین؟', en: 'Human-like machine?', choices: [{t:'Robot (روبوٹ)', c:true}, {t:'Car', c:false}] },
+            { id: 15, icon: '📡', ur: 'سگنل لینے کے لیے؟', en: 'To get signals?', choices: [{t:'Antenna (انٹینا)', c:true}, {t:'Wire', c:false}] },
+            { id: 16, icon: '🚀', ur: 'خلا میں کیا جاتا ہے؟', en: 'What goes to space?', choices: [{t:'Rocket (راکٹ)', c:true}, {t:'Bus', c:false}] },
+            { id: 17, icon: '🚗', ur: 'بغیر ڈرائیور کے کار؟', en: 'Driverless car?', choices: [{t:'Tesla / AI Car', c:true}, {t:'Tractor', c:false}] },
+            { id: 18, icon: '🧮', ur: 'حساب کرنے والی پرانی مشین؟', en: 'Old counting tool?', choices: [{t:'Abacus', c:true}, {t:'Pencil', c:false}] },
+            { id: 19, icon: '🔈', ur: 'آواز اونچی کرنے کے لیے؟', en: 'To make sound loud?', choices: [{t:'Speaker (سپیکر)', c:true}, {t:'Mic', c:false}] },
+            { id: 20, icon: '🌡️', ur: 'بخار چیک کرنے کے لیے؟', en: 'To check fever?', choices: [{t:'Thermometer', c:true}, {t:'Scale', c:false}] },
+            { id: 21, icon: '🔦', ur: 'اندھیرے میں روشنی کے لیے؟', en: 'Light in dark?', choices: [{t:'Flashlight (ٹارچ)', c:true}, {t:'Candle', c:false}] },
+            { id: 22, icon: '🔌', ur: 'چارجر کہاں لگاتے ہیں؟', en: 'Where to plug charger?', choices: [{t:'Socket (ساکٹ)', c:true}, {t:'Wall', c:false}] },
+            { id: 23, icon: '📶', ur: 'انٹرنیٹ کے لیے کیا چاہیے؟', en: 'Needed for internet?', choices: [{t:'Wi-Fi', c:true}, {t:'Radio', c:false}] },
+            { id: 24, icon: '🧲', ur: 'لوہے کو کون کھینچتا ہے؟', en: 'What pulls iron?', choices: [{t:'Magnet (مقناطیس)', c:true}, {t:'Wood', c:false}] },
+            { id: 25, icon: '💳', ur: 'پیسے نکالنے والا کارڈ؟', en: 'Card to get money?', choices: [{t:'ATM Card', c:true}, {t:'Paper', c:false}] },
+            { id: 26, icon: '🏧', ur: 'مشین سے پیسے کہاں سے ملتے ہیں؟', en: 'Machine that gives cash?', choices: [{t:'ATM', c:true}, {t:'Oven', c:false}] },
+            { id: 27, icon: '🛰️', ur: 'زمین کے گرد کیا گھومتا ہے؟', en: 'Circles the Earth?', choices: [{t:'Satellite', c:true}, {t:'Plane', c:false}] },
+            { id: 28, icon: '💿', ur: 'ڈیٹا سٹور کرنے کے لیے؟', en: 'To store data?', choices: [{t:'CD / DVD', c:true}, {t:'Plate', c:false}] },
+            { id: 29, icon: '🖱️', ur: 'کلک کس سے کرتے ہیں؟', en: 'What do we click with?', choices: [{t:'Mouse', c:true}, {t:'Pen', c:false}] },
+            { id: 30, icon: '🌍', ur: 'پوری دنیا کس سے جڑی ہے؟', en: 'World is connected by?', choices: [{t:'Internet', c:true}, {t:'Roads', c:false}] }
+        ],
+        islamic: [
+            { id: 1, icon: '🌍', ur: 'ہم اللہ کو کیسے پہچان سکتے ہیں؟', en: 'How can we recognize Allah?', choices: [{t:'By His creation (اس کی مخلوق سے)', c:true}, {t:'By humans (انسانوں سے)', c:false}] },
+            { id: 2, icon: '🕋', ur: 'ہمارا قبلہ کہاں ہے؟', en: 'Where is our Qibla?', choices: [{t:'Makkah 🕋', c:true}, {t:'London', c:false}] },
+            { id: 3, icon: '📖', ur: 'اللہ کی آخری کتاب؟', en: 'Last book of Allah?', choices: [{t:'Quran (قرآن)', c:true}, {t:'Injil', c:false}] },
+            { id: 4, icon: '🌙', ur: 'روزے کس مہینے میں ہوتے ہیں؟', en: 'Month of fasting?', choices: [{t:'Ramadan (رمضان)', c:true}, {t:'Shawwal', c:false}] },
+            { id: 5, icon: '🕌', ur: 'ایک دن میں کتنی نمازیں؟', en: 'Prayers in a day?', choices: [{t:'Five (پانچ)', c:true}, {t:'Three', c:false}] },
+            { id: 6, icon: '💧', ur: 'نماز سے پہلے کیا کرتے ہیں؟', en: 'Before prayer, we do?', choices: [{t:'Wudu (وضو)', c:true}, {t:'Bath', c:false}] },
+            { id: 7, icon: '🤲', ur: 'اللہ سے مانگنے کو کیا کہتے ہیں؟', en: 'Asking Allah is called?', choices: [{t:'Dua (دعا)', c:true}, {t:'Talk', c:false}] },
+            { id: 8, icon: '🕋', ur: 'حج کہاں کیا جاتا ہے؟', en: 'Where is Hajj done?', choices: [{t:'Makkah', c:true}, {t:'Madinah', c:false}] },
+            { id: 9, icon: '🕌', ur: 'نماز کے لیے کون بلاتا ہے؟', en: 'Who calls for prayer?', choices: [{t:'Azan (اذان)', c:true}, {t:'Music', c:false}] },
+            { id: 10, icon: '📅', ur: 'اسلامی سال کا پہلا مہینہ؟', en: '1st Islamic month?', choices: [{t:'Muharram', c:true}, {t:'Safar', c:false}] },
+            { id: 11, icon: '🕌', ur: 'جمعہ کی نماز کہاں پڑھتے ہیں؟', en: 'Friday prayer place?', choices: [{t:'Mosque (مسجد)', c:true}, {t:'Home', c:false}] },
+            { id: 12, icon: '🕋', ur: 'خانہ کعبہ کس نے بنایا؟', en: 'Who built Kaaba?', choices: [{t:'Ibrahim (A.S)', c:true}, {t:'Musa (A.S)', c:false}] },
+            { id: 13, icon: '🕌', ur: 'اذان دینے والے کو کیا کہتے ہیں؟', en: 'Who gives Azan?', choices: [{t:'Muazzin (موذن)', c:true}, {t:'Imam', c:false}] },
+            { id: 14, icon: '🤝', ur: 'ملتے وقت کیا کہنا چاہیے؟', en: 'Greeting in Islam?', choices: [{t:'Assalam-o-Alaikum', c:true}, {t:'Hello', c:false}] },
+            { id: 15, icon: '🍯', ur: 'نبی پاک ﷺ کو کیا پسند تھا؟', en: 'Prophet (PBUH) liked?', choices: [{t:'Honey (شہد)', c:true}, {t:'Chilli', c:false}] },
+            { id: 16, icon: '🛌', ur: 'سونے سے پہلے کیا پڑھیں؟', en: 'Dua before sleeping?', choices: [{t:'Allahumma Bismika...', c:true}, {t:'AlhamduLillah', c:false}] },
+            { id: 17, icon: '🍽️', ur: 'کھانے سے پہلے کیا پڑھیں؟', en: 'Dua before eating?', choices: [{t:'Bismillah', c:true}, {t:'SubhanAllah', c:false}] },
+            { id: 18, icon: '🕌', ur: 'مسجد میں کون سا پاؤں پہلے؟', en: 'First foot in Mosque?', choices: [{t:'Right (سیدھا)', c:true}, {t:'Left', c:false}] },
+            { id: 19, icon: '👨‍👩‍👧‍👦', ur: 'والدین کے ساتھ کیسا سلوک؟', en: 'Behavior with parents?', choices: [{t:'Kind (احسان)', c:true}, {t:'Rude', c:false}] },
+            { id: 20, icon: '🌟', ur: 'سچ بولنا کیا ہے؟', en: 'Speaking truth is?', choices: [{t:'Jannat (جنت)', c:true}, {t:'Bad', c:false}] },
+            { id: 21, icon: '🕌', ur: 'فجر کی نماز کب ہوتی ہے؟', en: 'When is Fajr?', choices: [{t:'Morning (صبح)', c:true}, {t:'Night', c:false}] },
+            { id: 22, icon: '🌙', ur: 'عید کب آتی ہے؟', en: 'When is Eid?', choices: [{t:'After Ramadan', c:true}, {t:'Every week', c:false}] },
+            { id: 23, icon: '💰', ur: 'غریبوں کو پیسے دینا؟', en: 'Giving to poor?', choices: [{t:'Zakat / Sadaqah', c:true}, {t:'Loan', c:false}] },
+            { id: 24, icon: '📖', ur: 'قرآن کی پہلی سورت؟', en: '1st Surah of Quran?', choices: [{t:'Al-Fatiha', c:true}, {t:'Al-Ikhlas', c:false}] },
+            { id: 25, icon: '💧', ur: 'آبِ زمزم کہاں ہے؟', en: 'Where is Zamzam?', choices: [{t:'Makkah', c:true}, {t:'Madinah', c:false}] },
+            { id: 26, icon: '🕌', ur: 'پہلی مسجد کون سی ہے؟', en: 'First Mosque?', choices: [{t:'Masjid-ul-Haram', c:true}, {t:'Faisal Mosque', c:false}] },
+            { id: 27, icon: '🕊️', ur: 'امن کا دین کون سا ہے؟', en: 'Religion of peace?', choices: [{t:'Islam', c:true}, {t:'None', c:false}] },
+            { id: 28, icon: '🕋', ur: 'حجرِ اسود کا رنگ؟', en: 'Color of Hajr-e-Aswad?', choices: [{t:'Black (کالا)', c:true}, {t:'White', c:false}] },
+            { id: 29, icon: '🕌', ur: 'مدینہ میں کون سی مسجد ہے؟', en: 'Mosque in Madinah?', choices: [{t:'Masjid-e-Nabwi', c:true}, {t:'Kaaba', c:false}] },
+            { id: 30, icon: '🤲', ur: 'ہم سب کا خالق کون ہے؟', en: 'Who created us?', choices: [{t:'Allah (اللہ)', c:true}, {t:'Sun', c:false}] }
+        ],
+        trees: [
+            { id: 1, icon: '🌳', ur: 'درخت ہمیں کیا دیتے ہیں؟', en: 'What do trees give?', choices: [{t:'Oxygen / Fruit', c:true}, {t:'Stones', c:false}] },
+            { id: 2, icon: '🪵', ur: 'لکڑی کہاں سے ملتی ہے؟', en: 'Where do we get wood?', choices: [{t:'Trees', c:true}, {t:'Sea', c:false}] },
+            { id: 3, icon: '🍎', ur: 'سیب کہاں اگتا ہے؟', en: 'Where do apples grow?', choices: [{t:'Tree (درخت)', c:true}, {t:'Underground', c:false}] },
+            { id: 4, icon: '🍃', ur: 'درخت کے پتے کس رنگ کے؟', en: 'Tree leaves color?', choices: [{t:'Green (ہرا)', c:true}, {t:'Blue', c:false}] },
+            { id: 5, icon: '🥥', ur: 'ناریل کہاں اگتا ہے؟', en: 'Where do coconuts grow?', choices: [{t:'Palm Tree', c:true}, {t:'Bush', c:false}] },
+            { id: 6, icon: '🪑', ur: 'کرسی کس سے بنتی ہے؟', en: 'Chair is made of?', choices: [{t:'Wood (لکڑی)', c:true}, {t:'Paper', c:false}] },
+            { id: 7, icon: '📄', ur: 'کاغذ کس سے بنتا ہے؟', en: 'Paper is made of?', choices: [{t:'Tree Pulp', c:true}, {t:'Cloth', c:false}] },
+            { id: 8, icon: '🐒', ur: 'درخت پر کون رہتا ہے؟', en: 'Who lives on trees?', choices: [{t:'Monkey', c:true}, {t:'Fish', c:false}] },
+            { id: 9, icon: '🐦', ur: 'گھونسلہ کہاں بنتا ہے؟', en: 'Where is a nest built?', choices: [{t:'On Trees', c:true}, {t:'In Water', c:false}] },
+            { id: 10, icon: '🌳', ur: 'گرمی میں سایہ کون دیتا ہے؟', en: 'Who gives shade in heat?', choices: [{t:'Tree (درخت)', c:true}, {t:'Lamp', c:false}] },
+            { id: 11, icon: '🥭', ur: 'آم کہاں سے ملتا ہے؟', en: 'Where do mangoes come from?', choices: [{t:'Tree', c:true}, {t:'Shop only', c:false}] },
+            { id: 12, icon: '🌳', ur: 'درخت کو زندہ رہنے کے لیے؟', en: 'Tree needs to live?', choices: [{t:'Water (پانی)', c:true}, {t:'Milk', c:false}] },
+            { id: 13, icon: '🍂', ur: 'خزاں میں پتوں کا کیا ہوتا ہے؟', en: 'Leaves in autumn?', choices: [{t:'Fall (گرتے ہیں)', c:true}, {t:'Grow more', c:false}] },
+            { id: 14, icon: '🌲', ur: 'پہاڑوں پر کون سے درخت؟', en: 'Trees on mountains?', choices: [{t:'Pine Tree', c:true}, {t:'Banana', c:false}] },
+            { id: 15, icon: '🌴', ur: 'کھجور کہاں اگتی ہے؟', en: 'Where do dates grow?', choices: [{t:'Date Palm', c:true}, {t:'Rose Bush', c:false}] },
+            { id: 16, icon: '🌳', ur: 'درخت کی جڑیں کہاں ہوتی ہیں؟', en: 'Tree roots are?', choices: [{t:'Underground (زمین کے نیچے)', c:true}, {t:'In air', c:false}] },
+            { id: 17, icon: '🪵', ur: 'درخت کا تنا (Trunk) کیسا ہوتا ہے؟', en: 'Tree trunk is?', choices: [{t:'Hard (سخت)', c:true}, {t:'Soft', c:false}] },
+            { id: 18, icon: '🌳', ur: 'زیادہ درخت لگانے سے؟', en: 'Planting more trees?', choices: [{t:'Better environment', c:true}, {t:'Nothing', c:false}] },
+            { id: 19, icon: '🌲', ur: 'کون سا درخت ہمیشہ ہرا رہتا ہے؟', en: 'Always green tree?', choices: [{t:'Evergreen', c:true}, {t:'Dry tree', c:false}] },
+            { id: 20, icon: '🌸', ur: 'پھل بننے سے پہلے کیا بنتا ہے؟', en: 'Before fruit comes?', choices: [{t:'Flower (پھول)', c:true}, {t:'Stone', c:false}] },
+            { id: 21, icon: '🍒', ur: 'چیری کہاں اگتی ہے؟', en: 'Where do cherries grow?', choices: [{t:'Tree', c:true}, {t:'Vines', c:false}] },
+            { id: 22, icon: '🌳', ur: 'درخت ہمیں کیا دیتے ہیں؟', en: 'Trees give us?', choices: [{t:'Fresh Air', c:true}, {t:'Smoke', c:false}] },
+            { id: 23, icon: '🌰', ur: 'اخروٹ کہاں سے ملتا ہے؟', en: 'Where do walnuts come from?', choices: [{t:'Walnut Tree', c:true}, {t:'Grass', c:false}] },
+            { id: 24, icon: '🪵', ur: 'لکڑی جلانے سے کیا ملتا ہے؟', en: 'Burning wood gives?', choices: [{t:'Fire / Heat', c:true}, {t:'Ice', c:false}] },
+            { id: 25, icon: '🌳', ur: 'پرندوں کا گھر؟', en: 'Home for birds?', choices: [{t:'Trees', c:true}, {t:'Cars', c:false}] },
+            { id: 26, icon: '🍏', ur: 'پھل دار درخت؟', en: 'Fruit bearing tree?', choices: [{t:'Apple Tree', c:true}, {t:'Banyan', c:false}] },
+            { id: 27, icon: '🪵', ur: 'بیڑی / کشتی کس سے بنتی ہے؟', en: 'Boats are made of?', choices: [{t:'Wood (لکڑی)', c:true}, {t:'Glass', c:false}] },
+            { id: 28, icon: '🌱', ur: 'ننھا پودا کس سے بنتا ہے؟', en: 'Small plant grows from?', choices: [{t:'Seed (بیج)', c:true}, {t:'Leaf', c:false}] },
+            { id: 29, icon: '🌲', ur: 'کرسمس ٹری کیسا ہوتا ہے؟', en: 'Christmas tree look?', choices: [{t:'Pine shape', c:true}, {t:'Round', c:false}] },
+            { id: 30, icon: '🌳', ur: 'درخت کاٹنا اچھی بات ہے؟', en: 'Cutting trees is good?', choices: [{t:'No (نہیں)', c:true}, {t:'Yes', c:false}] }
+        ],
+        flowers: [
+            { id: 1, icon: '🌹', ur: 'گلاب کا رنگ کیسا ہوتا ہے؟', en: 'Color of a Rose?', choices: [{t:'Red (لال)', c:true}, {t:'Blue', c:false}] },
+            { id: 2, icon: '🌻', ur: 'سورج مکھی کس طرف مڑتا ہے؟', en: 'Sunflower turns to?', choices: [{t:'Sun (سورج)', c:true}, {t:'Moon', c:false}] },
+            { id: 3, icon: '🌸', ur: 'پاکستان کا قومی پھول؟', en: 'National flower of Pakistan?', choices: [{t:'Jasmine (چنبیلی)', c:true}, {t:'Rose', c:false}] },
+            { id: 4, icon: '🌷', ur: 'ٹیولپ کہاں مشہور ہے؟', en: 'Where is Tulip famous?', choices: [{t:'Holland', c:true}, {t:'Desert', c:false}] },
+            { id: 5, icon: '🌹', ur: 'پھولوں میں کیا ہوتی ہے؟', en: 'Flowers have?', choices: [{t:'Fragrance (خوشبو)', c:true}, {t:'Taste', c:false}] },
+            { id: 6, icon: '🌼', ur: 'پھول کا رس کون چوستا ہے؟', en: 'Who drinks nectar?', choices: [{t:'Butterfly / Bee', c:true}, {t:'Dog', c:false}] },
+            { id: 7, icon: '🌹', ur: 'گلاب میں کیا ہوتے ہیں؟', en: 'What does a rose have?', choices: [{t:'Thorns (کانٹے)', c:true}, {t:'Hair', c:false}] },
+            { id: 8, icon: '🌸', ur: 'پھول کب کھلتے ہیں؟', en: 'When do flowers bloom?', choices: [{t:'Spring (بہار)', c:true}, {t:'Winter', c:false}] },
+            { id: 9, icon: '🌻', ur: 'سورج مکھی کا رنگ؟', en: 'Sunflower color?', choices: [{t:'Yellow (پیلا)', c:true}, {t:'Green', c:false}] },
+            { id: 10, icon: '🌺', ur: 'پھولوں سے کیا بنتا ہے؟', en: 'Made from flowers?', choices: [{t:'Perfume / Itar', c:true}, {t:'Oil', c:false}] },
+            { id: 11, icon: '🌸', ur: 'سفید پھول کون سا ہے؟', en: 'Which is a white flower?', choices: [{t:'Jasmine', c:true}, {t:'Sunflower', c:false}] },
+            { id: 12, icon: '🌷', ur: 'پھول کی پنکھڑی (Petal) کیسی؟', en: 'Flower petals are?', choices: [{t:'Soft (نرم)', c:true}, {t:'Hard', c:false}] },
+            { id: 13, icon: '🌹', ur: 'گلاب کا پودا کیسا ہوتا ہے؟', en: 'Rose plant type?', choices: [{t:'Bush (جھاڑی)', c:true}, {t:'Big Tree', c:false}] },
+            { id: 14, icon: '🌼', ur: 'پھولوں کو کیا چاہیے؟', en: 'Flowers need?', choices: [{t:'Sunlight & Water', c:true}, {t:'Milk', c:false}] },
+            { id: 15, icon: '💐', ur: 'پھولوں کے گلدستے کو؟', en: 'Bunch of flowers?', choices: [{t:'Bouquet', c:true}, {t:'Pot', c:false}] },
+            { id: 16, icon: '🌹', ur: 'سرخ گلاب کس کی علامت؟', en: 'Red rose is for?', choices: [{t:'Love', c:true}, {t:'Angry', c:false}] },
+            { id: 17, icon: '🌸', ur: 'پھول کہاں اگتے ہیں؟', en: 'Where do flowers grow?', choices: [{t:'Garden (باغ)', c:true}, {t:'Kitchen', c:false}] },
+            { id: 18, icon: '🌼', ur: 'پھول توڑنا کیسا ہے؟', en: 'Picking flowers is?', choices: [{t:'Bad (بری بات)', c:true}, {t:'Good', c:false}] },
+            { id: 19, icon: '🌸', ur: 'پھولوں کی خوشبو کیسی؟', en: 'How is flower smell?', choices: [{t:'Sweet (پیاری)', c:true}, {t:'Bad', c:false}] },
+            { id: 20, icon: '🌷', ur: 'پھولوں کا بادشاہ؟', en: 'King of flowers?', choices: [{t:'Rose (گلاب)', c:true}, {t:'Lily', c:false}] },
+            { id: 21, icon: '🌻', ur: 'سب سے بڑا پھول؟', en: 'Largest flower?', choices: [{t:'Rafflesia', c:true}, {t:'Daisy', c:false}] },
+            { id: 22, icon: '🌸', ur: 'پھولوں کی حفاظت؟', en: 'Protecting flowers?', choices: [{t:'Watering (پانی دیں)', c:true}, {t:'Hit them', c:false}] },
+            { id: 23, icon: '🌺', ur: 'شادیوں میں کیا استعمال ہوتا ہے؟', en: 'Used in weddings?', choices: [{t:'Flowers (پھول)', c:true}, {t:'Bricks', c:false}] },
+            { id: 24, icon: '🌼', ur: 'شہد کی مکھی کہاں جاتی ہے؟', en: 'Where does a bee go?', choices: [{t:'On Flowers', c:true}, {t:'To Moon', c:false}] },
+            { id: 25, icon: '🌸', ur: 'جاپانی پھول کون سا ہے؟', en: 'Japanese flower?', choices: [{t:'Cherry Blossom', c:true}, {t:'Lotus', c:false}] },
+            { id: 26, icon: '🌷', ur: 'پانی والا پھول؟', en: 'Water flower?', choices: [{t:'Lotus (کنول)', c:true}, {t:'Cactus', c:false}] },
+            { id: 27, icon: '🌹', ur: 'گلاب کا عرق؟', en: 'Rose water?', choices: [{t:'Arq-e-Gulab', c:true}, {t:'Juice', c:false}] },
+            { id: 28, icon: '🌼', ur: 'پھولوں کی کیاری؟', en: 'Flower bed?', choices: [{t:'Nursery', c:true}, {t:'Hospital', c:false}] },
+            { id: 29, icon: '🌸', ur: 'پھولوں سے کیا سجتا ہے؟', en: 'Decorated by flowers?', choices: [{t:'Stages / Events', c:true}, {t:'Roads only', c:false}] },
+            { id: 30, icon: '💐', ur: 'تحفے میں کیا دیں؟', en: 'Give as a gift?', choices: [{t:'Flowers (پھول)', c:true}, {t:'Stone', c:false}] }
+        ],
+        veg: [
+            { id: 1, icon: '🥕', ur: 'خرگوش کو کیا پسند ہے؟', en: 'Rabbit likes?', choices: [{t:'Carrot (گاجر)', c:true}, {t:'Bread', c:false}] },
+            { id: 2, icon: '🥔', ur: 'چپس کس سے بنتے ہیں؟', en: 'Chips are made from?', choices: [{t:'Potato (آلو)', c:true}, {t:'Apple', c:false}] },
+            { id: 3, icon: '🍅', ur: 'ٹماٹر کا رنگ کیسا ہے؟', en: 'Tomato color?', choices: [{t:'Red (لال)', c:true}, {t:'Blue', c:false}] },
+            { id: 4, icon: '🥦', ur: 'سبزیاں کھانے سے کیا ہوتا ہے؟', en: 'Veggies make you?', choices: [{t:'Strong 💪', c:true}, {t:'Weak', c:false}] },
+            { id: 5, icon: '🧅', ur: 'کاٹتے وقت آنکھوں میں آنسو؟', en: 'Tears when cutting?', choices: [{t:'Onion (پیاز)', c:true}, {t:'Potato', c:false}] },
+            { id: 6, icon: '🌽', ur: 'پاپ کارن کس سے بنتے ہیں؟', en: 'Popcorn is made of?', choices: [{t:'Corn (چھلی)', c:true}, {t:'Rice', c:false}] },
+            { id: 7, icon: '🌶️', ur: 'مرچ کا ذائقہ کیسا ہوتا ہے؟', en: 'Chilli taste?', choices: [{t:'Spicy (تیز)', c:true}, {t:'Sweet', c:false}] },
+            { id: 8, icon: '🥦', ur: 'پالک (Spinach) میں کیا ہوتا ہے؟', en: 'Spinach has?', choices: [{t:'Iron (طاقت)', c:true}, {t:'Sugar', c:false}] },
+            { id: 9, icon: '🥒', ur: 'سلاد میں کیا استعمال ہوتا ہے؟', en: 'Used in salad?', choices: [{t:'Cucumber (کھیرا)', c:true}, {t:'Chocolate', c:false}] },
+            { id: 10, icon: '🍆', ur: 'جامنی رنگ کی سبزی؟', en: 'Purple vegetable?', choices: [{t:'Brinjal (بینگن)', c:true}, {t:'Carrot', c:false}] },
+            { id: 11, icon: '🥦', ur: 'کون سی سبزی پھول جیسی؟', en: 'Vegetable like a flower?', choices: [{t:'Cauliflower', c:true}, {t:'Ginger', c:false}] },
+            { id: 12, icon: '🧄', ur: 'کھانے میں خوشبو کے لیے؟', en: 'For aroma in food?', choices: [{t:'Garlic (لہسن)', c:true}, {t:'Candy', c:false}] },
+            { id: 13, icon: '🥔', ur: 'آلو کہاں اگتا ہے؟', en: 'Where do potatoes grow?', choices: [{t:'Underground', c:true}, {t:'On Trees', c:false}] },
+            { id: 14, icon: '🥬', ur: 'سبز پتوں والی سبزی؟', en: 'Green leafy vegetable?', choices: [{t:'Lettuce / Palak', c:true}, {t:'Corn', c:false}] },
+            { id: 15, icon: '🥗', ur: 'صحت مند رہنے کے لیے؟', en: 'To stay healthy?', choices: [{t:'Eat Veggies', c:true}, {t:'Eat Sweets', c:false}] },
+            { id: 16, icon: '🥕', ur: 'آنکھوں کے لیے اچھی سبزی؟', en: 'Good for eyes?', choices: [{t:'Carrot (گاجر)', c:true}, {t:'Onion', c:false}] },
+            { id: 17, icon: '🥒', ur: 'ٹھنڈی سبزی کون سی ہے؟', en: 'Which is a cool veggie?', choices: [{t:'Cucumber', c:true}, {t:'Chilli', c:false}] },
+            { id: 18, icon: '🌽', ur: 'پیلے دانوں والی سبزی؟', en: 'Yellow grained veggie?', choices: [{t:'Corn (چھلی)', c:true}, {t:'Peas', c:false}] },
+            { id: 19, icon: '🥦', ur: 'سبزیاں دھونا ضروری ہے؟', en: 'Wash veggies first?', choices: [{t:'Yes (جی ہاں)', c:true}, {t:'No', c:false}] },
+            { id: 20, icon: '🍲', ur: 'سبزیوں کا سوپ کیسا ہے؟', en: 'How is veggie soup?', choices: [{t:'Healthy (اچھا)', c:true}, {t:'Bad', c:false}] },
+            { id: 21, icon: '🍠', ur: 'میٹھی سبزی کون سی ہے؟', en: 'Sweet vegetable?', choices: [{t:'Sweet Potato', c:true}, {t:'Radish', c:false}] },
+            { id: 22, icon: '🥔', ur: 'سبزیوں کا بادشاہ؟', en: 'King of vegetables?', choices: [{t:'Potato (آلو)', c:true}, {t:'Chilli', c:false}] },
+            { id: 23, icon: '🫑', ur: 'شملہ مرچ کا رنگ؟', en: 'Capsicum color?', choices: [{t:'Green/Red/Yellow', c:true}, {t:'Pink', c:false}] },
+            { id: 24, icon: '🥜', ur: 'مٹر کہاں سے نکلتے ہیں؟', en: 'Where do peas come from?', choices: [{t:'Pods (پھلی)', c:true}, {t:'Boxes', c:false}] },
+            { id: 25, icon: '🥗', ur: 'کچی سبزیاں کھانا؟', en: 'Eating raw veggies?', choices: [{t:'Salad', c:true}, {t:'Not possible', c:false}] },
+            { id: 26, icon: '🥕', ur: 'گاجر کا حلوہ کب بنتا ہے؟', en: 'Gajrela is made in?', choices: [{t:'Winter (سردی)', c:true}, {t:'Summer', c:false}] },
+            { id: 27, icon: '🥒', ur: 'اچار کس کا بنتا ہے؟', en: 'Pickle is made of?', choices: [{t:'Lemon/Mango/Veg', c:true}, {t:'Biscuit', c:false}] },
+            { id: 28, icon: '🍅', ur: 'کیچپ کس سے بنتا ہے؟', en: 'Ketchup is made of?', choices: [{t:'Tomato', c:true}, {t:'Grape', c:false}] },
+            { id: 29, icon: '🥦', ur: 'گوبھی کیسی ہوتی ہے؟', en: 'What does cauliflower look?', choices: [{t:'Like a white flower', c:true}, {t:'Long stick', c:false}] },
+            { id: 30, icon: '🥬', ur: 'روز سبزی کھانا کیسا ہے؟', en: 'Eating veggies daily?', choices: [{t:'Very Good (بہت اچھا)', c:true}, {t:'Boring', c:false}] }
+        ],
+        math: [
+            { id: 1, icon: '🔢', ur: '1 + 1 کتنے ہوتے ہیں؟', en: '1 + 1 = ?', choices: [{t:'2', c:true}, {t:'3', c:false}] },
+            { id: 2, icon: '🔢', ur: '2 + 2 کتنے ہوتے ہیں؟', en: '2 + 2 = ?', choices: [{t:'4', c:true}, {t:'5', c:false}] },
+            { id: 3, icon: '🔢', ur: '5 - 1 کتنے ہوتے ہیں؟', en: '5 - 1 = ?', choices: [{t:'4', c:true}, {t:'6', c:false}] },
+            { id: 4, icon: '🔢', ur: '10 کے بعد کیا آتا ہے؟', en: 'What comes after 10?', choices: [{t:'11', c:true}, {t:'9', c:false}] },
+            { id: 5, icon: '🔴', ur: 'اس میں کتنے کونے ہیں؟', en: 'How many corners in a circle?', choices: [{t:'0', c:true}, {t:'4', c:false}] },
+            { id: 6, icon: '📐', ur: 'تکون (Triangle) کے کتنے کونے؟', en: 'Triangle corners?', choices: [{t:'3', c:true}, {t:'4', c:false}] },
+            { id: 7, icon: '⬛', ur: 'مربع (Square) کے کتنے کونے؟', en: 'Square corners?', choices: [{t:'4', c:true}, {t:'3', c:false}] },
+            { id: 8, icon: '🖐️', ur: 'ایک ہاتھ میں کتنی انگلیاں؟', en: 'Fingers in one hand?', choices: [{t:'5', c:true}, {t:'10', c:false}] },
+            { id: 9, icon: '👐', ur: 'دونوں ہاتھوں میں کتنی انگلیاں؟', en: 'Fingers in both hands?', choices: [{t:'10', c:true}, {t:'5', c:false}] },
+            { id: 10, icon: '🔢', ur: 'صفر (0) کا کیا مطلب ہے؟', en: 'What does zero mean?', choices: [{t:'Nothing (کچھ نہیں)', c:true}, {t:'Everything', c:false}] },
+            { id: 11, icon: '🔢', ur: '3 + 3 = ?', en: '3 + 3 = ?', choices: [{t:'6', c:true}, {t:'9', c:false}] },
+            { id: 12, icon: '🔢', ur: '4 - 2 = ?', en: '4 - 2 = ?', choices: [{t:'2', c:true}, {t:'4', c:false}] },
+            { id: 13, icon: '🔢', ur: 'سب سے چھوٹا نمبر؟', en: 'Smallest number?', choices: [{t:'0', c:true}, {t:'9', c:false}] },
+            { id: 14, icon: '🔢', ur: '9 سے بڑا کیا ہے؟', en: 'What is bigger than 9?', choices: [{t:'10', c:true}, {t:'8', c:false}] },
+            { id: 15, icon: '📅', ur: 'ایک ہفتے میں کتنے دن؟', en: 'Days in a week?', choices: [{t:'7', c:true}, {t:'6', c:false}] },
+            { id: 16, icon: '🔢', ur: '6 + 4 = ?', en: '6 + 4 = ?', choices: [{t:'10', c:true}, {t:'12', c:false}] },
+            { id: 17, icon: '🔢', ur: '7 - 3 = ?', en: '7 - 3 = ?', choices: [{t:'4', c:true}, {t:'5', c:false}] },
+            { id: 18, icon: '🔢', ur: 'آدھا (Half) کتنا ہوتا ہے؟', en: 'What is half of 2?', choices: [{t:'1', c:true}, {t:'2', c:false}] },
+            { id: 19, icon: '🔢', ur: '8 کے بعد کیا آتا ہے؟', en: 'What comes after 8?', choices: [{t:'9', c:true}, {t:'7', c:false}] },
+            { id: 20, icon: '🔢', ur: '5 + 0 = ?', en: '5 + 0 = ?', choices: [{t:'5', c:true}, {t:'0', c:false}] },
+            { id: 21, icon: '🚲', ur: 'سائیکل کے کتنے پہیے؟', en: 'Wheels on a cycle?', choices: [{t:'2', c:true}, {t:'3', c:false}] },
+            { id: 22, icon: '🚗', ur: 'کار کے کتنے پہیے؟', en: 'Wheels on a car?', choices: [{t:'4', c:true}, {t:'2', c:false}] },
+            { id: 23, icon: '🖐️', ur: 'انگوٹھے کتنے ہیں؟', en: 'How many thumbs?', choices: [{t:'2', c:true}, {t:'10', c:false}] },
+            { id: 24, icon: '🔢', ur: '9 - 9 = ?', en: '9 - 9 = ?', choices: [{t:'0', c:true}, {t:'9', c:false}] },
+            { id: 25, icon: '🔢', ur: '10 + 10 = ?', en: '10 + 10 = ?', choices: [{t:'20', c:true}, {t:'100', c:false}] },
+            { id: 26, icon: '🔢', ur: 'سب سے بڑا ایک ہندسہ؟', en: 'Largest 1-digit number?', choices: [{t:'9', c:true}, {t:'1', c:false}] },
+            { id: 27, icon: '🔢', ur: '20 سے پہلے کیا ہے؟', en: 'Before 20?', choices: [{t:'19', c:true}, {t:'21', c:false}] },
+            { id: 28, icon: '🔢', ur: '5 اور 5 کتنے؟', en: '5 and 5 make?', choices: [{t:'10', c:true}, {t:'15', c:false}] },
+            { id: 29, icon: '📐', ur: 'کون سی شکل گول ہے؟', en: 'Which shape is round?', choices: [{t:'Circle (دائرہ)', c:true}, {t:'Square', c:false}] },
+            { id: 30, icon: '🏆', ur: 'ریاضی کا سبق مکمل!', en: 'Math Lesson Done!', choices: [{t:'AlhamduLillah', c:true}, {t:'Okay', c:false}] }
+        ],
+        science: [
+            { id: 1, icon: '☀️', ur: 'سورج کہاں سے نکلتا ہے؟', en: 'Where does sun rise?', choices: [{t:'East (مشرق)', c:true}, {t:'West', c:false}] },
+            { id: 2, icon: '🌙', ur: 'چاند کب نکلتا ہے؟', en: 'When does moon appear?', choices: [{t:'Night (رات)', c:true}, {t:'Day', c:false}] },
+            { id: 3, icon: '🌧️', ur: 'بارش کہاں سے آتی ہے؟', en: 'Where does rain come from?', choices: [{t:'Clouds (بادل)', c:true}, {t:'Trees', c:false}] },
+            { id: 4, icon: '🔥', ur: 'آگ کیسی ہوتی ہے؟', en: 'How is fire?', choices: [{t:'Hot (گرم)', c:true}, {t:'Cold', c:false}] },
+            { id: 5, icon: '❄️', ur: 'برف کیسی ہوتی ہے؟', en: 'How is ice?', choices: [{t:'Cold (ٹھنڈی)', c:true}, {t:'Hot', c:false}] },
+            { id: 6, icon: '☁️', ur: 'بادلوں کا رنگ کیسا ہوتا ہے؟', en: 'Color of clouds?', choices: [{t:'White/Grey', c:true}, {t:'Green', c:false}] },
+            { id: 7, icon: '🌎', ur: 'ہم کہاں رہتے ہیں؟', en: 'Where do we live?', choices: [{t:'Earth (زمین)', c:true}, {t:'Mars', c:false}] },
+            { id: 8, icon: '💧', ur: 'پانی کا رنگ کیسا ہے؟', en: 'Color of water?', choices: [{t:'Colorless (کوئی نہیں)', c:true}, {t:'Blue', c:false}] },
+            { id: 9, icon: '🌊', ur: 'سمندر کا پانی کیسا ہوتا ہے؟', en: 'Sea water taste?', choices: [{t:'Salty (نمکین)', c:true}, {t:'Sweet', c:false}] },
+            { id: 10, icon: '🌬️', ur: 'تیز ہوا کو کیا کہتے ہیں؟', en: 'Fast air is called?', choices: [{t:'Wind (آندھی)', c:true}, {t:'Sun', c:false}] },
+            { id: 11, icon: '🌈', ur: 'دھنک (Rainbow) میں کتنے رنگ؟', en: 'Colors in a Rainbow?', choices: [{t:'7', c:true}, {t:'3', c:false}] },
+            { id: 12, icon: '⚖️', ur: 'بھاری چیز کہاں جاتی ہے؟', en: 'Heavy thing goes?', choices: [{t:'Down (نیچے)', c:true}, {t:'Up', c:false}] },
+            { id: 13, icon: '🎈', ur: 'غبارہ ہوا میں کیوں اڑتا ہے؟', en: 'Why balloon flies?', choices: [{t:'Air is light', c:true}, {t:'It has wings', c:false}] },
+            { id: 14, icon: '🧲', ur: 'مقناطیس کسے کھینچتا ہے؟', en: 'Magnet attracts?', choices: [{t:'Iron (لوہا)', c:true}, {t:'Wood', c:false}] },
+            { id: 15, icon: '🌿', ur: 'پودے کیا بناتے ہیں؟', en: 'Plants make?', choices: [{t:'Food / Oxygen', c:true}, {t:'Smoke', c:false}] },
+            { id: 16, icon: '👂', ur: 'آواز کس سے سنتے ہیں؟', en: 'Hear with?', choices: [{t:'Ears (کان)', c:true}, {t:'Eyes', c:false}] },
+            { id: 17, icon: '👀', ur: 'کس سے دیکھتے ہیں؟', en: 'See with?', choices: [{t:'Eyes (آنکھیں)', c:true}, {t:'Nose', c:false}] },
+            { id: 18, icon: '👃', ur: 'کس سے سونگھتے ہیں؟', en: 'Smell with?', choices: [{t:'Nose (ناک)', c:true}, {t:'Mouth', c:false}] },
+            { id: 19, icon: '👅', ur: 'ذائقہ کس سے پتہ چلتا ہے؟', en: 'Taste with?', choices: [{t:'Tongue (زبان)', c:true}, {t:'Teeth', c:false}] },
+            { id: 20, icon: '✋', ur: 'محسوس کس سے کرتے ہیں؟', en: 'Feel with?', choices: [{t:'Skin (جلد)', c:true}, {t:'Hair', c:false}] },
+            { id: 21, icon: '🦴', ur: 'ہمارے جسم کے اندر کیا ہے؟', en: 'Inside our body?', choices: [{t:'Bones (ہڈیاں)', c:true}, {t:'Cotton', c:false}] },
+            { id: 22, icon: '❤️', ur: 'دل کیا کرتا ہے؟', en: 'Heart function?', choices: [{t:'Pumps blood', c:true}, {t:'Thinks', c:false}] },
+            { id: 23, icon: '🧠', ur: 'سوچنے کا کام کون کرتا ہے؟', en: 'Who does thinking?', choices: [{t:'Brain (دماغ)', c:true}, {t:'Stomach', c:false}] },
+            { id: 24, icon: '🦷', ur: 'سب سے سخت حصہ جسم کا؟', en: 'Hardest body part?', choices: [{t:'Teeth (دانت)', c:true}, {t:'Nose', c:false}] },
+            { id: 25, icon: '🌌', ur: 'آسمان میں تارے کب چمکتے ہیں؟', en: 'Stars shine when?', choices: [{t:'Night (رات)', c:true}, {t:'Afternoon', c:false}] },
+            { id: 26, icon: '🌑', ur: 'سورج گرہن کیا ہے؟', en: 'Solar eclipse?', choices: [{t:'Moon blocks sun', c:true}, {t:'Sun sleeps', c:false}] },
+            { id: 27, icon: '🔦', ur: 'سایہ کب بنتا ہے؟', en: 'Shadow forms when?', choices: [{t:'Light is blocked', c:true}, {t:'It is dark', c:false}] },
+            { id: 28, icon: '🌋', ur: 'پہاڑ سے آگ نکلے تو؟', en: 'Fire from mountain?', choices: [{t:'Volcano', c:true}, {t:'Rain', c:false}] },
+            { id: 29, icon: '🍎', ur: 'گریویٹی (Gravity) کیا ہے؟', en: 'What is Gravity?', choices: [{t:'Earth pulls down', c:true}, {t:'Flying', c:false}] },
+            { id: 30, icon: '🏆', ur: 'سائنس کا سفر مکمل!', en: 'Science Journey Done!', choices: [{t:'Great!', c:true}, {t:'Wow', c:false}] }
+        ],
+        logic: [
+            { id: 1, icon: '🌂', ur: 'بارش ہو تو کیا چاہیے؟', en: 'Rainy day need?', choices: [{t:'Umbrella (چھتری)', c:true}, {t:'Fan', c:false}] },
+            { id: 2, icon: '🧤', ur: 'سردی میں کیا پہنیں؟', en: 'Winter wear?', choices: [{t:'Sweater (سویٹر)', c:true}, {t:'T-shirt', c:false}] },
+            { id: 3, icon: '👟', ur: 'بھاگنے کے لیے کیا پہنیں؟', en: 'Wear for running?', choices: [{t:'Shoes (جوتے)', c:true}, {t:'Slippers', c:false}] },
+            { id: 4, icon: '🍴', ur: 'سوپ کس سے پئیں؟', en: 'Drink soup with?', choices: [{t:'Spoon (چمچ)', c:true}, {t:'Knife', c:false}] },
+            { id: 5, icon: '🔥', ur: 'ہاتھ جل جائے تو؟', en: 'Hand burns, then?', choices: [{t:'Cold water', c:true}, {t:'Hot water', c:false}] },
+            { id: 6, icon: '🚦', ur: 'لال بتی پر کیا کریں؟', en: 'On red light?', choices: [{t:'Stop (رک جائیں)', c:true}, {t:'Go', c:false}] },
+            { id: 7, icon: '🚦', ur: 'ہری بتی پر کیا کریں؟', en: 'On green light?', choices: [{t:'Go (چلیں)', c:true}, {t:'Stop', c:false}] },
+            { id: 8, icon: '🏠', ur: 'گھر سے باہر جاتے وقت؟', en: 'Leaving home?', choices: [{t:'Lock door', c:true}, {t:'Open door', c:false}] },
+            { id: 9, icon: '😴', ur: 'نیند آئے تو کیا کریں؟', en: 'Feeling sleepy?', choices: [{t:'Sleep (سوئیں)', c:true}, {t:'Dance', c:false}] },
+            { id: 10, icon: '🥛', ur: 'پیاس لگے تو؟', en: 'Feeling thirsty?', choices: [{t:'Water (پانی)', c:true}, {t:'Food', c:false}] },
+            { id: 11, icon: '🍎', ur: 'بھوک لگے تو؟', en: 'Feeling hungry?', choices: [{t:'Eat (کھائیں)', c:true}, {t:'Run', c:false}] },
+            { id: 12, icon: '🧼', ur: 'ہاتھ گندے ہوں تو؟', en: 'Hands dirty?', choices: [{t:'Wash (دھوئیں)', c:true}, {t:'Hide', c:false}] },
+            { id: 13, icon: '✏️', ur: 'پنسل ٹوٹ جائے تو؟', en: 'Pencil breaks?', choices: [{t:'Sharpen (گھڑیں)', c:true}, {t:'Throw', c:false}] },
+            { id: 14, icon: '📖', ur: 'اندھیرا ہو تو کیا کریں؟', en: 'It is dark?', choices: [{t:'Turn on light', c:true}, {t:'Close eyes', c:false}] },
+            { id: 15, icon: '🕯️', ur: 'بجلی چلی جائے تو؟', en: 'Power out?', choices: [{t:'Torch / Candle', c:true}, {t:'TV', c:false}] },
+            { id: 16, icon: '🚲', ur: 'سائیکل چلانے کے لیے؟', en: 'To ride cycle?', choices: [{t:'Pedal (پیڈل)', c:true}, {t:'Engine', c:false}] },
+            { id: 17, icon: '🛑', ur: 'خطرہ ہو تو؟', en: 'Danger?', choices: [{t:'Be Careful', c:true}, {t:'Run fast', c:false}] },
+            { id: 18, icon: '🗑️', ur: 'کیلے کا چھلکا؟', en: 'Banana peel?', choices: [{t:'Dustbin', c:true}, {t:'Road', c:false}] },
+            { id: 19, icon: '🚶', ur: 'سڑک کیسے پار کریں؟', en: 'Cross road?', choices: [{t:'Zebra Crossing', c:true}, {t:'Anywhere', c:false}] },
+            { id: 20, icon: '🤝', ur: 'غلطی ہو جائے تو؟', en: 'Make a mistake?', choices: [{t:'Say Sorry', c:true}, {t:'Fight', c:false}] },
+            { id: 21, icon: '🎒', ur: 'سکول کے لیے کیا تیار کریں؟', en: 'Ready for school?', choices: [{t:'Bag (بستہ)', c:true}, {t:'Toys', c:false}] },
+            { id: 22, icon: '⏰', ur: 'وقت پر اٹھنے کے لیے؟', en: 'To wake on time?', choices: [{t:'Alarm', c:true}, {t:'Nothing', c:false}] },
+            { id: 23, icon: '🌳', ur: 'گرمی لگے تو؟', en: 'Feeling hot?', choices: [{t:'Fan (پنکھا)', c:true}, {t:'Sun', c:false}] },
+            { id: 24, icon: '🥛', ur: 'دودھ پینا کیسا ہے؟', en: 'Drinking milk?', choices: [{t:'Healthy', c:true}, {t:'Bad', c:false}] },
+            { id: 25, icon: '🎁', ur: 'تحفہ ملے تو کیا کہیں؟', en: 'Get a gift?', choices: [{t:'Thank You', c:true}, {t:'No', c:false}] },
+            { id: 26, icon: '🏗️', ur: 'بلڈنگ کیسے بنتی ہے؟', en: 'Building made of?', choices: [{t:'Bricks (اینٹیں)', c:true}, {t:'Paper', c:false}] },
+            { id: 27, icon: '🔨', ur: 'کیل ٹھونکنے کے لیے؟', en: 'To hit a nail?', choices: [{t:'Hammer (ہتھوڑا)', c:true}, {t:'Stick', c:false}] },
+            { id: 28, icon: '🧵', ur: 'کپڑے سینے کے لیے؟', en: 'To sew clothes?', choices: [{t:'Needle / Thread', c:true}, {t:'Gum', c:false}] },
+            { id: 29, icon: '🔑', ur: 'تالا کس سے کھلتا ہے؟', en: 'Lock opens with?', choices: [{t:'Key (چابی)', c:true}, {t:'Hammer', c:false}] },
+            { id: 30, icon: '🏁', ur: 'لوجک گیم ختم!', en: 'Logic Game End!', choices: [{t:'Smart Kid!', c:true}, {t:'Try again', c:false}] }
+        ],
+        patterns: [
+            { id: 1, icon: '🔴🔵🔴', ur: 'لال، نیلا، لال... اب کیا؟', en: 'Red, Blue, Red... Next?', choices: [{t:'Blue (نیلا)', c:true}, {t:'Red', c:false}] },
+            { id: 2, icon: '🍎🍏🍎', ur: 'سیب، ناشپاتی، سیب... اب؟', en: 'Apple, Pear, Apple... Next?', choices: [{t:'Pear', c:true}, {t:'Apple', c:false}] },
+            { id: 3, icon: '1, 2, 1', ur: '1, 2, 1... اب کیا؟', en: '1, 2, 1... Next?', choices: [{t:'2', c:true}, {t:'1', c:false}] },
+            { id: 4, icon: '☀️🌙☀️', ur: 'سورج، چاند، سورج... اب؟', en: 'Sun, Moon, Sun... Next?', choices: [{t:'Moon', c:true}, {t:'Sun', c:false}] },
+            { id: 5, icon: '🔺🔹🔺', ur: 'تکون، ڈائمنڈ، تکون... اب؟', en: 'Tri, Dia, Tri... Next?', choices: [{t:'Diamond', c:true}, {t:'Square', c:false}] },
+            { id: 6, icon: '🐱🐶🐱', ur: 'بلی، کتا، بلی... اب؟', en: 'Cat, Dog, Cat... Next?', choices: [{t:'Dog', c:true}, {t:'Cat', c:false}] },
+            { id: 7, icon: '⬆️⬇️⬆️', ur: 'اوپر، نیچے، اوپر... اب؟', en: 'Up, Down, Up... Next?', choices: [{t:'Down', c:true}, {t:'Left', c:false}] },
+            { id: 8, icon: 'A, B, A', ur: 'A, B, A... Next?', en: 'A, B, A... Next?', choices: [{t:'B', c:true}, {t:'C', c:false}] },
+            { id: 9, icon: '🔴🔴🔵', ur: 'لال، لال، نیلا... اب؟', en: 'Red, Red, Blue... Next?', choices: [{t:'Red', c:true}, {t:'Blue', c:false}] },
+            { id: 10, icon: '☁️🌧️☁️', ur: 'بادل، بارش، بادل... اب؟', en: 'Cloud, Rain, Cloud... Next?', choices: [{t:'Rain', c:true}, {t:'Cloud', c:false}] },
+            { id: 11, icon: '🍏🍏🍎', ur: 'Green, Green, Red... Next?', en: 'Green, Green, Red... Next?', choices: [{t:'Green', c:true}, {t:'Red', c:false}] },
+            { id: 12, icon: '2, 4, 6', ur: '2, 4, 6... Next?', en: '2, 4, 6... Next?', choices: [{t:'8', c:true}, {t:'7', c:false}] },
+            { id: 13, icon: '👈👉👈', ur: 'Left, Right, Left... Next?', en: 'Left, Right, Left... Next?', choices: [{t:'Right', c:true}, {t:'Left', c:false}] },
+            { id: 14, icon: '❄️🔥❄️', ur: 'Cold, Hot, Cold... Next?', en: 'Cold, Hot, Cold... Next?', choices: [{t:'Hot', c:true}, {t:'Snow', c:false}] },
+            { id: 15, icon: '🌕🌗🌑', ur: 'Full, Half, Empty... Next?', en: 'Full, Half, Empty... Next?', choices: [{t:'Full', c:true}, {t:'Empty', c:false}] },
+            { id: 16, icon: '🚗🚕🚗', ur: 'Car, Taxi, Car... Next?', en: 'Car, Taxi, Car... Next?', choices: [{t:'Taxi', c:true}, {t:'Bus', c:false}] },
+            { id: 17, icon: '🥛☕🥛', ur: 'Milk, Tea, Milk... Next?', en: 'Milk, Tea, Milk... Next?', choices: [{t:'Tea', c:true}, {t:'Water', c:false}] },
+            { id: 18, icon: '🥁🎺🥁', ur: 'Drum, Trumpet, Drum... Next?', en: 'Drum, Trumpet, Drum... Next?', choices: [{t:'Trumpet', c:true}, {t:'Violin', c:false}] },
+            { id: 19, icon: '5, 10, 15', ur: '5, 10, 15... Next?', en: '5, 10, 15... Next?', choices: [{t:'20', c:true}, {t:'25', c:false}] },
+            { id: 20, icon: '🔴⬛🔴', ur: 'Circle, Square, Circle... Next?', en: 'Circle, Square, Circle... Next?', choices: [{t:'Square', c:true}, {t:'Star', c:false}] },
+            { id: 21, icon: '10, 20, 30', ur: '10, 20, 30... Next?', en: '10, 20, 30... Next?', choices: [{t:'40', c:true}, {t:'50', c:false}] },
+            { id: 22, icon: '🍎🍌🍎', ur: 'Apple, Banana, Apple... Next?', en: 'Apple, Banana, Apple... Next?', choices: [{t:'Banana', c:true}, {t:'Grapes', c:false}] },
+            { id: 23, icon: '🌙⭐️🌙', ur: 'Moon, Star, Moon... Next?', en: 'Moon, Star, Moon... Next?', choices: [{t:'Star', c:true}, {t:'Sun', c:false}] },
+            { id: 24, icon: 'A, A, B', ur: 'A, A, B... Next?', en: 'A, A, B... Next?', choices: [{t:'A', c:true}, {t:'B', c:false}] },
+            { id: 25, icon: '🔵🔴🔵', ur: 'Blue, Red, Blue... Next?', en: 'Blue, Red, Blue... Next?', choices: [{t:'Red', c:true}, {t:'Yellow', c:false}] },
+            { id: 26, icon: '3, 6, 9', ur: '3, 6, 9... Next?', en: '3, 6, 9... Next?', choices: [{t:'12', c:true}, {t:'15', c:false}] },
+            { id: 27, icon: '🦁🐯🦁', ur: 'Lion, Tiger, Lion... Next?', en: 'Lion, Tiger, Lion... Next?', choices: [{t:'Tiger', c:true}, {t:'Bear', c:false}] },
+            { id: 28, icon: '⚽🏀⚽', ur: 'Ball A, Ball B, Ball A... Next?', en: 'Ball A, Ball B, Ball A... Next?', choices: [{t:'Ball B', c:true}, {t:'Net', c:false}] },
+            { id: 29, icon: '1, 1, 2', ur: '1, 1, 2... Next?', en: '1, 1, 2... Next?', choices: [{t:'1', c:true}, {t:'2', c:false}] },
+            { id: 30, icon: '🏆', ur: 'پیٹرن ماسٹر!', en: 'Pattern Master!', choices: [{t:'Well Done!', c:true}, {t:'Again', c:false}] }
+        ],
+        colors: [
+            { id: 1, icon: '🍎', ur: 'سیب کا رنگ کیسا ہے؟', en: 'Apple color?', choices: [{t:'Red (لال)', c:true}, {t:'Blue', c:false}] },
+            { id: 2, icon: '🍌', ur: 'کیلے کا رنگ؟', en: 'Banana color?', choices: [{t:'Yellow (پیلا)', c:true}, {t:'Pink', c:false}] },
+            { id: 3, icon: '🍃', ur: 'پتے کا رنگ؟', en: 'Leaf color?', choices: [{t:'Green (ہرا)', c:true}, {t:'Orange', c:false}] },
+            { id: 4, icon: '🌌', ur: 'آسمان کا رنگ؟', en: 'Sky color?', choices: [{t:'Blue (نیلا)', c:true}, {t:'Brown', c:false}] },
+            { id: 5, icon: '🥛', ur: 'دودھ کا رنگ؟', en: 'Milk color?', choices: [{t:'White (سفید)', c:true}, {t:'Black', c:false}] },
+            { id: 6, icon: '👣', ur: 'بالوں کا رنگ؟', en: 'Hair color?', choices: [{t:'Black (کالا)', c:true}, {t:'Green', c:false}] },
+            { id: 7, icon: '🍊', ur: 'مالٹے کا رنگ؟', en: 'Orange color?', choices: [{t:'Orange (نارنجی)', c:true}, {t:'Purple', c:false}] },
+            { id: 8, icon: '🍇', ur: 'انگور کا رنگ؟', en: 'Grapes color?', choices: [{t:'Green/Purple', c:true}, {t:'Yellow', c:false}] },
+            { id: 9, icon: '🍆', ur: 'بینگن کا رنگ؟', en: 'Brinjal color?', choices: [{t:'Purple (جامنی)', c:true}, {t:'Red', c:false}] },
+            { id: 10, icon: '🍫', ur: 'چاکلیٹ کا رنگ؟', en: 'Chocolate color?', choices: [{t:'Brown (بھورا)', c:true}, {t:'White', c:false}] },
+            { id: 11, icon: '🥕', ur: 'گاجر کا رنگ؟', en: 'Carrot color?', choices: [{t:'Orange / Red', c:true}, {t:'Blue', c:false}] },
+            { id: 12, icon: '🍓', ur: 'سٹرابیری کا رنگ؟', en: 'Strawberry color?', choices: [{t:'Red (لال)', c:true}, {t:'Black', c:false}] },
+            { id: 13, icon: '🌑', ur: 'رات کا رنگ؟', en: 'Night color?', choices: [{t:'Black (کالا)', c:true}, {t:'White', c:false}] },
+            { id: 14, icon: '☁️', ur: 'بادل کا رنگ؟', en: 'Cloud color?', choices: [{t:'White / Grey', c:true}, {t:'Blue', c:false}] },
+            { id: 15, icon: '🌻', ur: 'سورج مکھی کا رنگ؟', en: 'Sunflower color?', choices: [{t:'Yellow (پیلا)', c:true}, {t:'Red', c:false}] },
+            { id: 16, icon: '🌳', ur: 'درخت کے تنے (Trunk) کا رنگ؟', en: 'Tree trunk color?', choices: [{t:'Brown (بھورا)', c:true}, {t:'Green', c:false}] },
+            { id: 17, icon: '🌹', ur: 'سرخ گلاب کا رنگ؟', en: 'Red Rose color?', choices: [{t:'Red (سرخ)', c:true}, {t:'Yellow', c:false}] },
+            { id: 18, icon: '🍋', ur: 'لیموں کا رنگ؟', en: 'Lemon color?', choices: [{t:'Yellow (پیلا)', c:true}, {t:'Blue', c:false}] },
+            { id: 19, icon: '🍅', ur: 'ٹماٹر کا رنگ؟', en: 'Tomato color?', choices: [{t:'Red (لال)', c:true}, {t:'Green', c:false}] },
+            { id: 20, icon: '🥦', ur: 'گوبھی کا رنگ؟', en: 'Broccoli color?', choices: [{t:'Green (ہرا)', c:true}, {t:'Pink', c:false}] },
+            { id: 21, icon: '🔥', ur: 'آگ کا رنگ؟', en: 'Fire color?', choices: [{t:'Red / Orange', c:true}, {t:'Grey', c:false}] },
+            { id: 22, icon: '🦢', ur: 'بگلے (Swan) کا رنگ؟', en: 'Swan color?', choices: [{t:'White (سفید)', c:true}, {t:'Black', c:false}] },
+            { id: 23, icon: '🐘', ur: 'ہاتھی کا رنگ؟', en: 'Elephant color?', choices: [{t:'Grey (سرمئی)', c:true}, {t:'Red', c:false}] },
+            { id: 24, icon: '💖', ur: 'دل کا رنگ؟', en: 'Heart icon color?', choices: [{t:'Pink / Red', c:true}, {t:'Green', c:false}] },
+            { id: 25, icon: '🧱', ur: 'اینٹ کا رنگ؟', en: 'Brick color?', choices: [{t:'Reddish Brown', c:true}, {t:'Blue', c:false}] },
+            { id: 26, icon: '🐥', ur: 'چوزے کا رنگ؟', en: 'Chick color?', choices: [{t:'Yellow (پیلا)', c:true}, {t:'Purple', c:false}] },
+            { id: 27, icon: '🌊', ur: 'گہرے سمندر کا رنگ؟', en: 'Deep sea color?', choices: [{t:'Blue (نیلا)', c:true}, {t:'White', c:false}] },
+            { id: 28, icon: '🐜', ur: 'چیونٹی کا رنگ؟', en: 'Ant color?', choices: [{t:'Black / Red', c:true}, {t:'Green', c:false}] },
+            { id: 29, icon: '🌽', ur: 'چھلی کا رنگ؟', en: 'Corn color?', choices: [{t:'Yellow (پیلا)', c:true}, {t:'Pink', c:false}] },
+            { id: 30, icon: '🏆', ur: 'رنگوں کے ماہر!', en: 'Color Expert!', choices: [{t:'Colorful!', c:true}, {t:'Grey', c:false}] }
+        ],
+        social: [
+            { id: 1, icon: '👨', ur: 'ابو کے بھائی کو کیا کہتے ہیں؟', en: 'Father\'s brother?', choices: [{t:'Chacha (چچا)', c:true}, {t:'Mamu', c:false}] },
+            { id: 2, icon: '👩', ur: 'امی کے بھائی کو کیا کہتے ہیں؟', en: 'Mother\'s brother?', choices: [{t:'Mamu (ماموں)', c:true}, {t:'Chacha', c:false}] },
+            { id: 3, icon: '👵', ur: 'ابو کی امی کو کیا کہتے ہیں؟', en: 'Father\'s mother?', choices: [{t:'Dadi (دادی)', c:true}, {t:'Nani', c:false}] },
+            { id: 4, icon: '👵', ur: 'امی کی امی کو کیا کہتے ہیں؟', en: 'Mother\'s mother?', choices: [{t:'Nani (نانی)', c:true}, {t:'Dadi', c:false}] },
+            { id: 5, icon: '👧', ur: 'ابو کی بہن کو کیا کہتے ہیں؟', en: 'Father\'s sister?', choices: [{t:'Phupho (پھپھو)', c:true}, {t:'Khala', c:false}] },
+            { id: 6, icon: '👩', ur: 'امی کی بہن کو کیا کہتے ہیں؟', en: 'Mother\'s sister?', choices: [{t:'Khala (خالہ)', c:true}, {t:'Phupho', c:false}] },
+            { id: 7, icon: '👨‍👩‍👧‍👦', ur: 'بہن بھائیوں کے ساتھ؟', en: 'With siblings?', choices: [{t:'Love (محبت)', c:true}, {t:'Fight', c:false}] },
+            { id: 8, icon: '🤝', ur: 'دوستوں کے ساتھ کیسا سلوک؟', en: 'How to treat friends?', choices: [{t:'Kind (اچھا)', c:true}, {t:'Rude', c:false}] },
+            { id: 9, icon: '🏫', ur: 'ٹیچر کی بات؟', en: 'Listen to teacher?', choices: [{t:'Yes (جی ہاں)', c:true}, {t:'No', c:false}] },
+            { id: 10, icon: '🏠', ur: 'مہمان آئے تو کیا کریں؟', en: 'Guest arrives?', choices: [{t:'Salam / Welcome', c:true}, {t:'Hide', c:false}] },
+            { id: 11, icon: '👨', ur: 'ابو کے ابو کو؟', en: 'Father\'s father?', choices: [{t:'Dada (دادا)', c:true}, {t:'Nana', c:false}] },
+            { id: 12, icon: '👨', ur: 'امی کے ابو کو؟', en: 'Mother\'s father?', choices: [{t:'Nana (نانا)', c:true}, {t:'Dada', c:false}] },
+            { id: 13, icon: '👶', ur: 'چھوٹے بھائی کے ساتھ؟', en: 'With baby brother?', choices: [{t:'Care (خیال)', c:true}, {t:'Tease', c:false}] },
+            { id: 14, icon: '👵', ur: 'بڑوں کی کیا کرنی چاہیے؟', en: 'What to do for elders?', choices: [{t:'Respect (عزت)', c:true}, {t:'Ignore', c:false}] },
+            { id: 15, icon: '🏘️', ur: 'ہمسایوں کے ساتھ؟', en: 'With neighbors?', choices: [{t:'Help (مدد)', c:true}, {t:'Noise', c:false}] },
+            { id: 16, icon: '👦', ur: 'اپنے سے بڑوں کو؟', en: 'To those older?', choices: [{t:'Aap (آپ)', c:true}, {t:'Tu', c:false}] },
+            { id: 17, icon: '🍽️', ur: 'کھانا مل کر کھانا؟', en: 'Eating together?', choices: [{t:'Barakat (برکت)', c:true}, {t:'Bad', c:false}] },
+            { id: 18, icon: '🎁', ur: 'چیزیں بانٹنا (Sharing)؟', en: 'Sharing is?', choices: [{t:'Caring (اچھا)', c:true}, {t:'Selfish', c:false}] },
+            { id: 19, icon: '🏥', ur: 'بیمار کی عیادت کرنا؟', en: 'Visiting sick?', choices: [{t:'Sawab (ثواب)', c:true}, {t:'Boring', c:false}] },
+            { id: 20, icon: '🧼', ur: 'صفائی میں امی کی؟', en: 'Helping mom clean?', choices: [{t:'Help (مدد)', c:true}, {t:'Mess', c:false}] },
+            { id: 21, icon: '🛒', ur: 'سودا لانے میں ابو کی؟', en: 'Helping dad shop?', choices: [{t:'Help (مدد)', c:true}, {t:'Cry', c:false}] },
+            { id: 22, icon: '🏫', ur: 'کلاس میں شور مچانا؟', en: 'Noise in class?', choices: [{t:'Bad (بری بات)', c:true}, {t:'Good', c:false}] },
+            { id: 23, icon: '🧸', ur: 'کھلونے بانٹنا؟', en: 'Sharing toys?', choices: [{t:'Good (اچھا)', c:true}, {t:'Bad', c:false}] },
+            { id: 24, icon: '👵', ur: 'دادی کو پانی پلانا؟', en: 'Water for grandma?', choices: [{t:'Sawab (ثواب)', c:true}, {t:'No', c:false}] },
+            { id: 25, icon: '👮', ur: 'پولیس کیا کرتی ہے؟', en: 'Police duty?', choices: [{t:'Help / Safety', c:true}, {t:'Sleep', c:false}] },
+            { id: 26, icon: '👨‍⚕️', ur: 'ڈاکٹر کیا کرتا ہے؟', en: 'Doctor duty?', choices: [{t:'Cures (علاج)', c:true}, {t:'Hurts', c:false}] },
+            { id: 27, icon: '👨‍🏫', ur: 'استاد کیا کرتا ہے؟', en: 'Teacher duty?', choices: [{t:'Teaches (پڑھانا)', c:true}, {t:'Plays', c:false}] },
+            { id: 28, icon: '👷', ur: 'مزدور کیا کرتا ہے؟', en: 'Laborer duty?', choices: [{t:'Builds (تعمیر)', c:true}, {t:'Rests', c:false}] },
+            { id: 29, icon: '👨‍🌾', ur: 'کسان کیا کرتا ہے؟', en: 'Farmer duty?', choices: [{t:'Grows Food', c:true}, {t:'Drives', c:false}] },
+            { id: 30, icon: '🏆', ur: 'بہترین بچہ!', en: 'Best Kid!', choices: [{t:'Mubarak!', c:true}, {t:'Thanks', c:false}] }
+        ]
+    };
+
+    // ہر کیٹیگری کے لیے 30 لیولز مکمل کرنا
+    categories.forEach(cat => {
+        if (!database[cat.id]) database[cat.id] = [];
+        for (let i = database[cat.id].length + 1; i <= 30; i++) {
+            database[cat.id].push({
+                id: i, icon: cat.icon,
+                ur: `${cat.name} سوال نمبر ${i}`,
+                en: `${cat.name} Question ${i}`,
+                choices: [{t:'Sahi Jawab (Correct) ✅', c:true}, {t:'Ghalat (Wrong) ❌', c:false}]
+            });
+        }
+    });
+
+    function renderCategories() {
+        const list = document.getElementById('category-list');
+        list.innerHTML = '';
+        categories.forEach(cat => {
+            const div = document.createElement('div');
+            div.className = 'category-card';
+            div.onclick = () => openLevels(cat.id);
+            div.innerHTML = `<div class="cat-icon">${cat.icon}</div><div class="cat-info"><div class="urdu" style="font-size:1.2rem; margin:0;">${cat.name}</div><div class="english" style="margin:0;">30 Levels Unlocked</div></div>`;
+            list.appendChild(div);
+        });
+    }
+
+    function openLevels(catId) {
+        const cat = categories.find(c => c.id === catId);
+        document.getElementById('cat-title-display').innerText = cat.name;
+        const container = document.getElementById('level-dots-container');
+        container.innerHTML = '';
+        for(let i=1; i<=30; i++) {
+            const dot = document.createElement('div');
+            const isCompleted = userProgress[catId] && userProgress[catId].includes(i);
+            dot.className = 'level-dot' + (isCompleted ? ' completed' : '');
+            dot.innerText = i;
+            dot.onclick = () => startLevel(catId, i);
+            container.appendChild(dot);
+        }
+        showScreen('level-screen');
+    }
+
+    function startLevel(catId, levelNum) {
+        let q = database[catId].find(item => item.id === levelNum);
+        document.getElementById('q-icon').innerText = q.icon;
+        document.getElementById('q-ur').innerText = q.ur;
+        document.getElementById('q-en').innerText = q.en;
+        const box = document.getElementById('choices-box');
+        box.innerHTML = '';
+        q.choices.forEach(ch => {
+            const btn = document.createElement('button');
+            btn.className = 'choice-btn';
+            btn.innerText = ch.t;
+            btn.onclick = () => {
+                if(ch.c) {
+                    if(!userProgress[catId]) userProgress[catId] = [];
+                    if(!userProgress[catId].includes(levelNum)) userProgress[catId].push(levelNum);
+                    localStorage.setItem('zahniProgress', JSON.stringify(userProgress));
+                    openLevels(catId);
+                } else { alert("Ghalat! Try again! 😊"); }
+            };
+            box.appendChild(btn);
+        });
+        showScreen('game-screen');
+    }
+
+    function showScreen(id) {
+        document.querySelectorAll('#app > div').forEach(div => { if(!div.classList.contains('header-bar')) div.classList.add('hidden'); });
+        document.getElementById(id).classList.remove('hidden');
+    }
+
+    function resetAll() { if(confirm("Reset all progress?")) { localStorage.clear(); userProgress = {}; location.reload(); } }
+    renderCategories();
+</script>
+</body>
+</html>
